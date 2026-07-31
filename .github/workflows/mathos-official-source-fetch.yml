@@ -1,0 +1,35 @@
+name: MathOS Official Source Fetch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - tools/mathos_fetch_official.py
+      - .github/workflows/mathos-official-source-fetch.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install verification dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 pypdf
+      - name: Fetch and verify official NCIC originals
+        continue-on-error: true
+        run: python tools/mathos_fetch_official.py
+      - name: Upload fetched originals and audit indexes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MathOS-official-source-fetch
+          path: MathOS-official-source-fetch
+          if-no-files-found: error
+          retention-days: 7
