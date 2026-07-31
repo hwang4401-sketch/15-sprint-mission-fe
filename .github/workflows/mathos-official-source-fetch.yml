@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - tools/mathos_fetch_official.py
+      - tools/mathos_fetch_diagnostics.py
       - .github/workflows/mathos-official-source-fetch.yml
   workflow_dispatch:
 
@@ -25,11 +26,22 @@ jobs:
       - name: Fetch and verify official NCIC originals
         continue-on-error: true
         run: python tools/mathos_fetch_official.py
+      - name: Capture remaining candidates for direct inspection
+        if: always()
+        run: python tools/mathos_fetch_diagnostics.py
       - name: Upload fetched originals and audit indexes
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: MathOS-official-source-fetch
           path: MathOS-official-source-fetch
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload remaining candidates for direct inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MathOS-official-source-diagnostics
+          path: MathOS-official-source-diagnostics
           if-no-files-found: error
           retention-days: 7
