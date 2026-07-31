@@ -1,9 +1,6 @@
 name: MathOS Official Source Acquisition 06
 
 on:
-  push:
-    branches:
-      - agent/mathos-official-source-acquisition-06
   pull_request:
     branches:
       - basic
@@ -17,7 +14,7 @@ permissions:
 jobs:
   acquire:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,6 +22,19 @@ jobs:
           python-version: "3.12"
       - name: Install acquisition dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 pypdf gdown
+      - name: Limit acquisition to official attachment identifiers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/mathos-acquire-official-batch-06.py')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('def get(u,ref=None,t=180):','def get(u,ref=None,t=60):')
+          s=s.replace("q=get(u,t=120)","q=get(u,t=45)")
+          s=s.replace("q=get(DL.format(k),u,300)","q=get(DL.format(k),u,60)")
+          broad=""" for k in re.findall(r'[0-9a-fA-F]{32}',txt):\n  i=txt.find(k); a=BeautifulSoup(txt[max(0,i-500):i+500],'html.parser').get_text(' ',strip=True)\n  if any(x in a for x in ('pdf','PDF','첨부','촘촘','편수자료')): out.append((sid,k.lower(),u,a[:300]))\n"""
+          s=s.replace(broad,'')
+          p.write_text(s,encoding='utf-8')
+          PY
       - name: Download and verify official originals
         run: python scripts/mathos-acquire-official-batch-06.py
       - name: Build physical artifact manifest
@@ -33,15 +43,13 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import hashlib, json
-          root = Path('MathOS-official-source-batch-06')
-          (root / 'index').mkdir(parents=True, exist_ok=True)
+          root=Path('MathOS-official-source-batch-06'); (root/'index').mkdir(parents=True,exist_ok=True)
           rows=[]
           for p in sorted(root.rglob('*')):
               if p.is_file():
                   h=hashlib.sha256()
                   with p.open('rb') as f:
-                      for b in iter(lambda:f.read(1024*1024),b''):
-                          h.update(b)
+                      for b in iter(lambda:f.read(1024*1024),b''): h.update(b)
                   rows.append({'path':p.relative_to(root).as_posix(),'size_bytes':p.stat().st_size,'sha256':h.hexdigest()})
           (root/'index'/'artifact-manifest.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2),encoding='utf-8')
           print('artifact_files',len(rows))
