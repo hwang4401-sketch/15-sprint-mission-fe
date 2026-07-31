@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/mathos-official-source-acquisition-06
+  pull_request:
+    branches:
+      - basic
     paths:
       - scripts/mathos-acquire-official-batch-06.py
       - .github/workflows/mathos-official-source-acquisition-06.yml
